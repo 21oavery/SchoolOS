@@ -11,7 +11,7 @@ window.onload = function() {
         var win = winE.getContext("2d");
         var xPos = 0;
         var yPos = 0;
-        var textMatrix = {};
+        var mem = new Uint16Array(xMax * yMax);
         var isCursorVisable;
         var curBlink;
         var blinkInterval;
@@ -28,26 +28,44 @@ window.onload = function() {
                     api.redraw();
                 }
             },
+            "getSize": function() {
+                return [xMax, yMax];
+            },
             "setCursorPos": function(x, y) {
                 xPos = x;
                 yPos = y;
             },
+            "getCursorPos": function() {
+                return [xPos, yPos];
+            },
             "clear": function() {
-                for (let i = 0; i < 16; ++i) {
-                    textMatrix[i] = "";
+                for (let i = 0; i < mem.length; ++i) {
+                    mem[i] = 32;
                 }
             },
             "write": function(s) {
-                var rowLen = textMatrix[yPos].length;
-                if (rowLen < (xPos - 1)) {
-                    textMatrix[yPos] += " ".repeat(xPos - rowLen);
-                    rowLen = xPos - 1;
+                for (let i = 0; i < s.length; ++i) {
+                    mem[xPos + yPos * xMax] = s.charCodeAt(i);
+                    ++xPos;
+                    if (xPos >= xMax) {
+                        xPos = 0;
+                        ++yPos;
+                        if (yPos >= yMax) {
+                            --yPos;
+                            api.scroll();
+                        }
+                    }
                 }
-                if ((xPos + s.length) > xMax) {
-                    s = s.substring(0, xMax - xPos);
+            },
+            "scroll": function() {
+                for (let i = 0; i < (yMax - 1); ++i) {
+                    for (let j = 0; j < xMax; ++j) {
+                        mem[i * xMax + j] = textMatrix[i * xMax + xMax + j];
+                    }
                 }
-                textMatrix[yPos] = textMatrix[yPos].substring(0, xPos) + s + textMatrix[yPos].substring(xPos + s.length, xMax + 1);
-                xPos += s.length;
+                for (let j = 0; j < xMax; ++j) {
+                    mem[(yMax - 1) * xMax + j] = 32;
+                }
             },
             "redraw": function() {
                 win.fillStyle = "#000000";
@@ -56,7 +74,11 @@ window.onload = function() {
                 win.font = "30px Lucida Console";
                 win.textAlign = "left";
                 for (let i = 0; i < yMax; ++i) {
-                    win.fillText(textMatrix[i], 5, i * 30 + 27);
+                    let line = "";
+                    for (let j = 0; j < xMax; ++j) {
+                        line += String.fromCharCode(mem[i * xMax + j]);
+                    }
+                    win.fillText(line, 5, i * 30 + 27);
                 }
                 if (isCursorVisable && curBlink && (xPos < xMax)) {
                     win.fillText("_", xPos * 18 + 5, yPos * 30 + 27);
@@ -67,18 +89,28 @@ window.onload = function() {
             curBlink = !curBlink;
             api.redraw();
         };
-        api.setCursorVisable(true);
         api.clear();
         api.redraw();
+        api.setCursorVisable(true);
         return api;
     };
+    var getKeyboard = function() {
+        var api = {
+            "addListener": function(f) {
+                return document.addEventListener("keypress", f);
+            }
+        };
+        return api;
+    };
+    //var read = function(t, k) {
+    //    var start = t.getCursorPos();
+    //    var end = t.get
     var t = getTerm("win");
+    var k = getKeyboard();
     t.write("User: ");
-    //t.setCursorPos(10, 0);
-    //t.write("HI---------------------------------------");
-    //document.addEventListener("keypress", function(e) {
-    //    t.write("" + e.key);
-    //});
+    var size = t.getSize();
+    k.addListener(function(e) {
+        if (e.))
 };
 </script>
 </head>
