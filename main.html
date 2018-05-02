@@ -4,15 +4,87 @@
 <head>
 <script>
 window.onload = function() {
-    var winE = document.getElementById("win");
-    var win = winE.getContext("2d");
-    win.fillRect(1, 1, 100, 100);
+    var getTerm = function(id) {
+        var winE = document.getElementById(id);
+        var xMax = Math.floor((winE.width - 5) / 18);
+        var yMax = Math.floor((winE.height - 27) / 30);
+        var win = winE.getContext("2d");
+        var xPos = 0;
+        var yPos = 0;
+        var textMatrix = {};
+        var isCursorVisable;
+        var curBlink;
+        var blinkInterval;
+        var blinkFunct;
+        var api = {
+            "setCursorVisable": function(v) {
+                isCursorVisable = v ? true : false;
+                if (isCursorVisable) {
+                    curBlink = true;
+                    blinkInterval = setInterval(blinkFunct, 500);
+                    api.redraw();
+                } else {
+                    clearInterval(blinkInterval);
+                    api.redraw();
+                }
+            },
+            "setCursorPos": function(x, y) {
+                xPos = x;
+                yPos = y;
+            },
+            "clear": function() {
+                for (let i = 0; i < 16; ++i) {
+                    textMatrix[i] = "";
+                }
+            },
+            "write": function(s) {
+                var rowLen = textMatrix[yPos].length;
+                if (rowLen < (xPos - 1)) {
+                    textMatrix[yPos] += " ".repeat(xPos - rowLen);
+                    rowLen = xPos - 1;
+                }
+                if ((xPos + s.length) > xMax) {
+                    s = s.substring(0, xMax - xPos);
+                }
+                textMatrix[yPos] = textMatrix[yPos].substring(0, xPos) + s + textMatrix[yPos].substring(xPos + s.length, xMax + 1);
+                xPos += s.length;
+            },
+            "redraw": function() {
+                win.fillStyle = "#000000";
+                win.fillRect(0, 0, winE.width, winE.height);
+                win.fillStyle = "#FFFFFF";
+                win.font = "30px Lucida Console";
+                win.textAlign = "left";
+                for (let i = 0; i < yMax; ++i) {
+                    win.fillText(textMatrix[i], 5, i * 30 + 27);
+                }
+                if (isCursorVisable && curBlink && (xPos < xMax)) {
+                    win.fillText("_", xPos * 18 + 5, yPos * 30 + 27);
+                }
+            }
+        };
+        blinkFunct = function() {
+            curBlink = !curBlink;
+            api.redraw();
+        };
+        api.setCursorVisable(true);
+        api.clear();
+        api.redraw();
+        return api;
+    };
+    var t = getTerm("win");
+    t.write("User: ");
+    //t.setCursorPos(10, 0);
+    //t.write("HI---------------------------------------");
+    //document.addEventListener("keypress", function(e) {
+    //    t.write("" + e.key);
+    //});
 };
 </script>
 </head>
 
 <body>
-<canvas id="win" width=1280 height=720>
+<canvas id="win" width=640 height=480><!--35, 16-->
 </body>
 
 </html>
