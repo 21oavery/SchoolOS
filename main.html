@@ -6,8 +6,9 @@
 window.onload = function() {
     var getTerm = function(id) {
         var winE = document.getElementById(id);
-        var xMax = Math.floor((winE.width - 5) / 18);
-        var yMax = Math.floor((winE.height - 27) / 30);
+        var xMax = Math.floor(winE.width / 8);
+        var yMax = Math.floor(winE.height / 20);
+        console.log(xMax + ", " + yMax);
         var win = winE.getContext("2d");
         var xPos = 0;
         var yPos = 0;
@@ -34,6 +35,7 @@ window.onload = function() {
             "setCursorPos": function(x, y) {
                 xPos = x;
                 yPos = y;
+                api.redraw();
             },
             "getCursorPos": function() {
                 return [xPos, yPos];
@@ -60,7 +62,7 @@ window.onload = function() {
             "scroll": function() {
                 for (let i = 0; i < (yMax - 1); ++i) {
                     for (let j = 0; j < xMax; ++j) {
-                        mem[i * xMax + j] = textMatrix[i * xMax + xMax + j];
+                        mem[i * xMax + j] = mem[i * xMax + xMax + j];
                     }
                 }
                 for (let j = 0; j < xMax; ++j) {
@@ -71,18 +73,67 @@ window.onload = function() {
                 win.fillStyle = "#000000";
                 win.fillRect(0, 0, winE.width, winE.height);
                 win.fillStyle = "#FFFFFF";
-                win.font = "30px Lucida Console";
+                win.font = "20px Lucida Console";
                 win.textAlign = "left";
                 for (let i = 0; i < yMax; ++i) {
                     let line = "";
                     for (let j = 0; j < xMax; ++j) {
                         line += String.fromCharCode(mem[i * xMax + j]);
                     }
-                    win.fillText(line, 5, i * 30 + 27);
+                    win.fillText(line, 0, i * 20 + 20);
                 }
                 if (isCursorVisable && curBlink && (xPos < xMax)) {
-                    win.fillText("_", xPos * 18 + 5, yPos * 30 + 27);
+                    win.fillText("_", xPos * 12, yPos * 20 + 20);
                 }
+            },
+            "read": function(t, sizeMax, rep) {
+                var tSize = t.getSize();
+                return new Promise(function(ok, err) {
+                    var s = "";
+                    var keyboard = getKeyboard(function(e, key) {
+                        //console.log(e + " => " + key.key);
+                        switch (e) {
+                            case "key":
+                                switch (key.key) {
+                                    case "Enter":
+                                        keyboard.setState(false);
+                                        var pos = t.getCursorPos()[1] + 1;
+                                        if (pos >= tSize[1]) {
+                                            pos = tSize[1] - 1;
+                                            t.scroll();
+                                        }
+                                        t.setCursorPos(0, pos);
+                                        ok(s);
+                                        break;
+                                    case "Backspace":
+                                        if (s.length == 0) break;
+                                        var pos = t.getCursorPos();
+                                        --pos[0];
+                                        if (pos[0] < 0) {
+                                            pos[0] = tSize[0] - 1;
+                                            --pos[1];
+                                            if (pos[1] < 0) {
+                                                pos[1] = 0;
+                                            }
+                                        }
+                                        t.setCursorPos(pos[0], pos[1]);
+                                        t.write(" ");
+                                        t.setCursorPos(pos[0], pos[1]);
+                                        s = s.substring(0, s.length - 1);
+                                        //break;
+                                }
+                                break;
+                            case "char":
+                                if ((s.length < sizeMax) && (key.key != "Enter")) {
+                                    var pos = t.getCursorPos();
+                                    if ((pos[0] == (xMax - 1)) && (pos[1] == (yMax - 1))) break;
+                                    s += key.key;
+                                    t.write(rep || key.key);
+                                }
+                                //break;
+                        }
+                    });
+                });
             }
         };
         blinkFunct = function() {
@@ -94,29 +145,39 @@ window.onload = function() {
         api.setCursorVisable(true);
         return api;
     };
-    var getKeyboard = function() {
+    var getKeyboard = function(f) {
+        var f1 = function(e) {f("char", e)};
+        var f2 = function(e) {f("key", e)};
+        var on;
         var api = {
-            "addListener": function(f) {
-                return document.addEventListener("keypress", f);
+            "setState": function(v) {
+                if (on == v) return;
+                if (v) {
+                    on = true;
+                    document.addEventListener("keypress", f1);
+                    document.addEventListener("keydown", f2);
+                } else {
+                    on = false;
+                    document.removeEventListener("keypress", f1);
+                    document.removeEventListener("keydown", f2);
+                }
             }
         };
+        api.setState(true);
         return api;
     };
-    //var read = function(t, k) {
-    //    var start = t.getCursorPos();
-    //    var end = t.get
-    var t = getTerm("win");
-    var k = getKeyboard();
-    t.write("User: ");
-    var size = t.getSize();
-    k.addListener(function(e) {
-        if (e.))
+    var term = getTerm("win");
+    term.write("User: _");
+    term.setCursorPos(6, 0);
+    //term.write("#");
+    //term.read(term, 64000).then(v => console.log(v));
+    var size = term.getSize();
 };
 </script>
 </head>
 
 <body>
-<canvas id="win" width=640 height=480><!--35, 16-->
+<canvas id="win" width=640 height=480><!--80, 24-->
 </body>
 
 </html>
